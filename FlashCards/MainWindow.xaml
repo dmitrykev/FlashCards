@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:FlashCards"
         mc:Ignorable="d"
-        Title="Flash Cards" Height="455" Width="600" ResizeMode="NoResize" WindowStartupLocation="CenterScreen">
+        Title="Flash Cards" Height="455" Width="600" ResizeMode="NoResize" WindowStartupLocation="CenterScreen" Icon="/card.png">
     <Window.Resources>
         <Style TargetType="TextBox" x:Key="TextBoxAdd">
             <Setter Property="FontSize" Value="20"/>
@@ -120,7 +120,6 @@
                                             <Border BorderBrush="#bababa" BorderThickness="1">
                                                 <Grid>
                                                     <Grid.ColumnDefinitions>
-                                                        <!--<ColumnDefinition Width="45"/>-->
                                                         <ColumnDefinition Width="*"/>
                                                         <ColumnDefinition Width="10"/>
                                                         <ColumnDefinition Width="*"/>
@@ -148,7 +147,7 @@
                                                         Style="{StaticResource TextBlockLibrary}"/>
                                                     <Button Grid.Column="3" Background="Transparent" BorderThickness="0" x:Name="btnTrash" Click="btnTrash_Click">
                                                         <Image
-                                                            Source="C:\Users\Kwin\source\repos\FlashCards\FlashCards\Icons\DeleteIcon.png"
+                                                            Source="..\..\Icons\DeleteIcon.png"
                                                             Height="20"/>
                                                     </Button>
                                                 </Grid>

@@ -18,9 +18,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FlashCards
 {
-    /// <summary>
-    /// Interaction logic for MainWindow.xaml
-    /// </summary>
+    
     public partial class MainWindow : Window
     {
         private DbContextOptionsBuilder<FlashCardsContext> optionsBuilder;
@@ -39,50 +37,53 @@ namespace FlashCards
 
             // Building options
             optionsBuilder = new DbContextOptionsBuilder<FlashCardsContext>();
-            options = optionsBuilder.UseSqlServer(connectionString).Options;
+            options = optionsBuilder.UseSqlite(connectionString).Options;
 
             LoadLibrary();
             
         }
 
+        // Load сards in ListBox
         public void LoadLibrary()
         {
             using (FlashCardsContext db = new FlashCardsContext(options))
             {
+                // Check database availability
                 if (!db.Database.CanConnect())
                     throw new Exception("Database is not available");
+                
                 List<Card> items = new List<Card>();
                 var cards = db.Cards.ToList();
                 foreach (var card in cards)
                 {
                     items.Add(new Card() { ID = card.ID, Word = card.Word, Translate = card.Translate });
                 }
-
                 Labrary.ItemsSource = items;
 
-                if (textBlockCards1.Text == "")
+                /*if (textBlockCards1.Text == "")
                 {
                     textBlockCards1.Text = items[0].Word;
                     textBlockCards2.Text = items[0].Translate;
-                }
+                }*/
             }
         }
 
+        // Card add button
         private void btnAdd_Click(object sender, EventArgs e)
         {
+            // Check fields aren't empty
             if (textBoxAdd1.Text != "" && textBoxAdd2.Text != "")
             {
-                // форматирование вводимых строк "Такое"
+                // Formatting the input string "Such"
                 string subWord = textBoxAdd1.Text.Substring(0, 1).ToUpper() + textBoxAdd1.Text.Substring(1).ToLower();
                 string subTranslate = textBoxAdd2.Text.Substring(0, 1).ToUpper() + textBoxAdd2.Text.Substring(1).ToLower();
+
                 // INSERT INTO CardsDB
                 using (FlashCardsContext db = new FlashCardsContext(options))
                 {
-                    // создаем экземпляр класса и описываем его свойства
-                    Card card = new Card { Word = subWord, Translate = subTranslate };
+                    Card card = new Card { Word = subWord, Translate = subTranslate, Try = 5, Show = 5 };
 
-                    // добавляем объект в коллекцию (таблицу), которую ранее описали в CardsContext.cs
-                    
+                    // Check if this card exists
                     try
                     {
                         db.Cards.Add(card);
@@ -101,7 +102,8 @@ namespace FlashCards
                 MessageBox.Show("Fields must not be empty!");
 
         }
-        
+
+        // Card delete button
         private void btnTrash_Click(object sender, RoutedEventArgs e)
         {
             Button? button = sender as Button;
@@ -129,6 +131,7 @@ namespace FlashCards
             textBoxSearch.Text = "";
         }
 
+        // Search field text change event
         private void TextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
             string searchText = textBoxSearch.Text.ToLower();
@@ -137,7 +140,8 @@ namespace FlashCards
             {
                 List<Card> items = new List<Card>();
                 var cards = db.Cards.ToList();
-                foreach(var card in cards)
+                // Substring search
+                foreach (var card in cards)
                 {
                     if (card.Word.ToLower().Contains(searchText) || card.Translate.ToLower().Contains(searchText))
                     {
@@ -149,58 +153,80 @@ namespace FlashCards
             }
         }
 
+        // Called card index
         int cardCounter = 0;
+        // Show a next card in Cards
         private void GetNextCard()
         {
             using (FlashCardsContext db = new FlashCardsContext(options))
             {
                 var cards = db.Cards.ToList();
 
-                RefreshCards:
-                if (cardCounter < cards.Count)
+                // Check having cards
+                if (cards.Count > 0)
                 {
-                    if (cards[cardCounter].Show > 0)
+                    RefreshCards:
+                    if (cardCounter < cards.Count) // Check index is out of range
                     {
-                        textBlockCards1.Text = cards[cardCounter].Word;
-                        textBlockCards2.Text = cards[cardCounter].Translate;
-
-                        cards[cardCounter].Show--;
-                        db.Update(cards[cardCounter]);
-                        db.SaveChanges();
-
-                        showsCount.Text = Convert.ToString(cards[cardCounter].Show);
-
-                        cardCounter++;
-                    }
-                    else
-                    {
-                        var card = db.Cards.FirstOrDefault(x => x.Show > 0);
-                        if (card != null)
+                        // Check a card has Shows
+                        if (cards[cardCounter].Show > 0)
                         {
+                            // Output a card
+                            textBlockCards1.Text = cards[cardCounter].Word;
+                            textBlockCards2.Text = cards[cardCounter].Translate;
+
+                            // Update the shows count
+                            cards[cardCounter].Show--;
+                            db.Update(cards[cardCounter]);
+                            db.SaveChanges();
+
+                            // Output the shows count
+                            showsCount.Text = Convert.ToString(cards[cardCounter].Show);
+
+                            // To the next card index
                             cardCounter++;
-                            goto RefreshCards;
                         }
                         else
                         {
-                            btnCards.Visibility = textBlockCards1.Visibility = textBlockCards2.Visibility = textBlockCards3.Visibility = Visibility.Hidden;
-                            btnCardsRestart.Visibility = Visibility.Visible;
-                            MessageBox.Show("Shows are over. Click the Restart button to reset the shows counter.");
+                            // Make sure at least one card has a Show
+                            var card = db.Cards.FirstOrDefault(x => x.Show > 0);
+                            if (card != null)
+                            {
+                                cardCounter++;
+                                goto RefreshCards;
+                            }
+                            else
+                            {
+                                // Show restart button
+                                btnCards.Visibility = textBlockCards1.Visibility = textBlockCards2.Visibility = textBlockCards3.Visibility = Visibility.Hidden;
+                                btnCardsRestart.Visibility = Visibility.Visible;
+                                MessageBox.Show("Shows are over. Click the Restart button to reset the shows counter.");
+                            }
                         }
+                    }
+                    else
+                    {
+                        // Reset card index if counter is out of range
+                        cardCounter = 0;
+                        goto RefreshCards;
                     }
                 }
                 else
                 {
-                    cardCounter = 0;
-                    goto RefreshCards;
+                    btnCardsStart.Visibility = Visibility.Visible;
+                    btnCards.Visibility = textBlockCards1.Visibility = textBlockCards2.Visibility = textBlockCards3.Visibility = Visibility.Hidden;
+                    MessageBox.Show("Your cards set is empty.");
                 }
-            }
 
+
+            }
         }
         private void btnCards_Click(object sender, RoutedEventArgs e)
         {
             GetNextCard();
         }
 
+        // Start a shows card
         private void btnCardsStart_Click(object sender, RoutedEventArgs e)
         {
             btnCardsStart.Visibility = Visibility.Hidden;
@@ -224,6 +250,7 @@ namespace FlashCards
 
         }
 
+        // Reset Shows of cards
         private void btnCardsRestart_Click(object sender, RoutedEventArgs e)
         {
             using (FlashCardsContext db = new FlashCardsContext(options))
@@ -231,7 +258,7 @@ namespace FlashCards
                 var cards = db.Cards.ToList();
                 foreach (var card in cards)
                 {
-                    card.Show = 5;
+                    card.Show += 5;
                     db.Update(card);
                 }
                 db.SaveChanges();
@@ -253,80 +280,104 @@ namespace FlashCards
             GetNextTry();
         }
 
+        // Called card index
         int tryCounter = 0;
+        // Show a next card in Training
         private void GetNextTry()
         {
             using (FlashCardsContext db = new FlashCardsContext(options))
             {
                 var cards = db.Cards.ToList();
 
-            RefreshTry:
-                if (tryCounter < cards.Count)
+                // Check having 3 of cards
+                if (cards.Count > 2)
                 {
-                    if (cards[tryCounter].Try > 0)
+                    RefreshTry:
+                    if (tryCounter < cards.Count) // Check if index is out of range
                     {
-                        textBlockTraining1.Text = cards[tryCounter].Translate;
-                        string[] rndTranslate = new string[3];
-                        rndTranslate[0] = cards[tryCounter].Word;
-                        Random rnd = new Random();
-
-                        for (int i = 1; i < rndTranslate.Length; i++)
+                        // Check a card has Try
+                        if (cards[tryCounter].Try > 0)
                         {
-                            rndTranslate[i] = cards[rnd.Next(cards.Count - 1)].Word;
+                            // Output the translate of card
+                            textBlockTraining1.Text = cards[tryCounter].Translate;
 
-                            if (rndTranslate[i] == rndTranslate[0] || rndTranslate[i] == rndTranslate[i - 1])
+                            // Output right answer with 2 randoms
+                            string[] rndTranslate = new string[3];
+                            rndTranslate[0] = cards[tryCounter].Word;
+                            Random rnd = new Random();
+                            for (int i = 1; i < rndTranslate.Length; i++)
                             {
-                                i--;
-                                continue;
+                                rndTranslate[i] = cards[rnd.Next(cards.Count)].Word;
+                                // Checking for the same answers
+                                if (rndTranslate[i] == rndTranslate[0] || rndTranslate[i] == rndTranslate[i - 1])
+                                {
+                                    i--;
+                                    continue;
+                                }
                             }
-                        }
 
-                        for (int i = rndTranslate.Length - 1; i >= 1; i--)
-                        {
-                            int j = rnd.Next(i + 1);
+                            // Shake answers
+                            for (int i = rndTranslate.Length - 1; i >= 1; i--)
+                            {
+                                int j = rnd.Next(i + 1);
 
-                            string tmp = rndTranslate[j];
-                            rndTranslate[j] = rndTranslate[i];
-                            rndTranslate[i] = tmp;
-                        }
+                                string tmp = rndTranslate[j];
+                                rndTranslate[j] = rndTranslate[i];
+                                rndTranslate[i] = tmp;
+                            }
 
-                        btnTraining1.Content = rndTranslate[0];
-                        btnTraining2.Content = rndTranslate[1];
-                        btnTraining3.Content = rndTranslate[2];
+                            // Output answers
+                            btnTraining1.Content = rndTranslate[0];
+                            btnTraining2.Content = rndTranslate[1];
+                            btnTraining3.Content = rndTranslate[2];
 
-                        cards[tryCounter].Try--;
-                        db.Update(cards[tryCounter]);
-                        db.SaveChanges();
+                            cards[tryCounter].Try--;
+                            db.Update(cards[tryCounter]);
+                            db.SaveChanges();
 
-                        tryCount.Text = Convert.ToString(cards[tryCounter].Try);
+                            // Output count of remaining Try
+                            tryCount.Text = Convert.ToString(cards[tryCounter].Try);
 
-                        tryCounter++;
-                    }
-                    else
-                    {
-                        var card = db.Cards.FirstOrDefault(x => x.Try > 0);
-                        if (card != null)
-                        {
+                            // To the next card index
                             tryCounter++;
-                            goto RefreshTry;
                         }
                         else
                         {
-                            textBlockTraining1.Visibility = textBlockTraining2.Visibility = btnTraining1.Visibility = btnTraining2.Visibility = btnTraining3.Visibility = Visibility.Hidden;
-                            btnTrainingRestart.Visibility = Visibility.Visible;
-                            MessageBox.Show("Trials are over. Click the Restart button to reset the try counter.");
+                            // Make sure at least one card has a Try
+                            var card = db.Cards.FirstOrDefault(x => x.Try > 0);
+                            if (card != null)
+                            {
+                                tryCounter++;
+                                goto RefreshTry;
+                            }
+                            else
+                            {
+                                // Show restart button
+                                textBlockTraining1.Visibility = textBlockTraining2.Visibility = btnTraining1.Visibility = btnTraining2.Visibility = btnTraining3.Visibility = Visibility.Hidden;
+                                btnTrainingRestart.Visibility = Visibility.Visible;
+                                MessageBox.Show("Trials are over. Click the Restart button to reset the try counter.");
+                            }
                         }
+                    }
+                    else
+                    {
+                        // Reset card index if counter is out of range
+                        tryCounter = 0;
+                        goto RefreshTry;
                     }
                 }
                 else
                 {
-                    tryCounter = 0;
-                    goto RefreshTry;
+                    textBlockTraining1.Visibility = textBlockTraining2.Visibility = btnTraining1.Visibility = btnTraining2.Visibility = btnTraining3.Visibility = Visibility.Hidden;
+                    btnTrainingStart.Visibility = Visibility.Visible;
+                    MessageBox.Show("Minimum count of cards for start training is 3.");
                 }
+                
             }
 
         }
 
+        // Reset Try of cards
         private void btnTrainingRestart_Click(object sender, RoutedEventArgs e)
         {
             using (FlashCardsContext db = new FlashCardsContext(options))
@@ -348,6 +399,7 @@ namespace FlashCards
             }
         }
 
+        // Check answer is right
         void PushButtonTraining(Button btn)
         {
             using(FlashCardsContext db = new FlashCardsContext(options))
@@ -360,10 +412,12 @@ namespace FlashCards
                 }
                 else
                 {
+                    // Display one of the error message
                     textBlockTraining3.Visibility = Visibility.Visible;
                     Random rnd = new Random();
                     textBlockTraining3.Text = errorWord[rnd.Next(errorWord.Length - 1)];
 
+                    // Add Show and Try if answer isn't right
                     cards.Show += 2;
                     cards.Try += 2;
                     tryCount.Text = Convert.ToString(cards.Try);
@@ -373,7 +427,7 @@ namespace FlashCards
                 }
             }
         }
-
+        // Error messages, in training
         string[] errorWord = new string[] { "Let's try again", "Nope...", "Not really!" };
         private void btnTraining1_Click(object sender, RoutedEventArgs e)
         {

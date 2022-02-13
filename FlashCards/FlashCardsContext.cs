@@ -8,7 +8,7 @@ namespace FlashCards
 
         public FlashCardsContext(DbContextOptions<FlashCardsContext> options) : base(options)
         {
-            //Database.EnsureCreated();
+            Database.EnsureCreated();
         }
     }
 }
