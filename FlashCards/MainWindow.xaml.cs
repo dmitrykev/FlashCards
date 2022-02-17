@@ -392,7 +392,7 @@ namespace FlashCards
 
                 tryCounter = 0;
 
-                textBlockTraining2.Visibility = btnTraining1.Visibility = btnTraining2.Visibility = btnTraining3.Visibility = Visibility.Visible;
+                textBlockTraining1.Visibility = textBlockTraining2.Visibility = btnTraining1.Visibility = btnTraining2.Visibility = btnTraining3.Visibility = Visibility.Visible;
                 btnTrainingRestart.Visibility = Visibility.Hidden;
 
                 GetNextTry();
